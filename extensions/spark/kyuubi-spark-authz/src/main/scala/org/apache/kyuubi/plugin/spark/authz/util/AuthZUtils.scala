@@ -28,6 +28,7 @@ import org.apache.hadoop.security.UserGroupInformation
 import org.apache.ranger.plugin.service.RangerBasePlugin
 import org.apache.spark.{SPARK_VERSION, SparkContext}
 import org.apache.spark.sql.catalyst.plans.logical.{LogicalPlan, View}
+import org.slf4j.LoggerFactory
 
 import org.apache.kyuubi.plugin.spark.authz.AccessControlException
 import org.apache.kyuubi.plugin.spark.authz.util.ReservedKeys._
@@ -47,13 +48,14 @@ private[authz] object AuthZUtils {
       spark.getConf.getBoolean(s"spark.$KYUUBI_SESSION_USER_SIGN_ENABLED", defaultValue = false)
 
     // kyuubi.session.user is only used by kyuubi
-    val user = spark.getLocalProperty(KYUUBI_SESSION_USER)
+    val user = spark.getLocalProperty(s"spark.$KYUUBI_SESSION_USER")
+
     if (isSessionUserVerifyEnabled) {
       verifyKyuubiSessionUser(spark, user)
     }
-
+    // config ranger use proxy user
     if (user != null && user != UserGroupInformation.getCurrentUser.getShortUserName) {
-      UserGroupInformation.createRemoteUser(user)
+      UserGroupInformation.createProxyUser(user, UserGroupInformation.getCurrentUser)
     } else {
       UserGroupInformation.getCurrentUser
     }

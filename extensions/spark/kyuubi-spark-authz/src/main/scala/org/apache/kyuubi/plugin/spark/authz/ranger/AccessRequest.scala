@@ -18,6 +18,7 @@
 package org.apache.kyuubi.plugin.spark.authz.ranger
 
 import java.util.{HashMap => JHashMap, Set => JSet}
+import java.util.{HashSet => JHashSet}
 import java.util.Date
 
 import scala.collection.JavaConverters._
@@ -38,7 +39,7 @@ object AccessRequest {
       opType: OperationType,
       accessType: AccessType): AccessRequest = {
     val userName = user.getShortUserName
-    val userGroups = getUserGroups(user)
+    val userGroups = getUserGroupsFromUgi
     val req = new AccessRequest(accessType)
     req.setResource(resource)
     req.setUser(userName)
@@ -72,13 +73,19 @@ object AccessRequest {
     user.getGroupNames.toSet.asJava
   }
 
+  private def getUserGroupsFromUgi: JSet[String] = {
+    val jSet: JSet[String] = new JHashSet[String]()
+    jSet.add("hive")
+    jSet
+  }
+
   private def getUserGroupsFromUserStore(user: UserGroupInformation): Option[JSet[String]] = {
     try {
       val storeEnricher = invokeAs[AnyRef](SparkRangerAdminPlugin, "getUserStoreEnricher")
       val userStore = invokeAs[AnyRef](storeEnricher, "getRangerUserStore")
       val userGroupMapping =
         invokeAs[JHashMap[String, JSet[String]]](userStore, "getUserGroupMapping")
-      Some(userGroupMapping.get(user.getShortUserName))
+      Option(userGroupMapping.get(user.getShortUserName))
     } catch {
       case _: NoSuchMethodException =>
         None
