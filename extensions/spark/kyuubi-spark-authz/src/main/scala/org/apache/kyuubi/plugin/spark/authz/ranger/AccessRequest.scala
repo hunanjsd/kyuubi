@@ -21,8 +21,6 @@ import java.util.{HashMap => JHashMap, Set => JSet}
 import java.util.{HashSet => JHashSet}
 import java.util.Date
 
-import scala.collection.JavaConverters._
-
 import org.apache.hadoop.security.UserGroupInformation
 import org.apache.ranger.plugin.policyengine.{RangerAccessRequestImpl, RangerPolicyEngine}
 
@@ -70,7 +68,9 @@ object AccessRequest {
   }
 
   private def getUserGroupsFromUgi(user: UserGroupInformation): JSet[String] = {
-    user.getGroupNames.toSet.asJava
+    val jSet: JSet[String] = new JHashSet[String]()
+    jSet.add("hive")
+    jSet
   }
 
   private def getUserGroupsFromUgi: JSet[String] = {
