@@ -120,8 +120,16 @@ object SparkTBinaryFrontendService extends Logging {
     val (hiveTokens, otherTokens) =
       KyuubiHadoopUtils.getTokenMap(newCreds).partition(_._2.getKind == HIVE_DELEGATION_TOKEN)
 
+    val currentUser = UserGroupInformation.getCurrentUser
+    if (currentUser.getAuthenticationMethod == UserGroupInformation.AuthenticationMethod.PROXY) {
+      hiveTokens.values
+        .foreach { token =>
+          UserGroupInformation.getCurrentUser.addToken(token)
+        }
+    }
+
     val updateCreds = new Credentials()
-    val oldCreds = UserGroupInformation.getCurrentUser.getCredentials
+    val oldCreds = currentUser.getCredentials
     addHiveToken(sc, hiveTokens, oldCreds, updateCreds)
     addOtherTokens(otherTokens, oldCreds, updateCreds)
     if (updateCreds.numberOfTokens() > 0) {

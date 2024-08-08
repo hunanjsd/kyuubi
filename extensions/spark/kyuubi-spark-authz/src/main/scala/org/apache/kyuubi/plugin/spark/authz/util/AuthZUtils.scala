@@ -53,7 +53,7 @@ private[authz] object AuthZUtils {
     }
 
     if (user != null && user != UserGroupInformation.getCurrentUser.getShortUserName) {
-      UserGroupInformation.createRemoteUser(user)
+      UserGroupInformation.createProxyUser(user, UserGroupInformation.getCurrentUser)
     } else {
       UserGroupInformation.getCurrentUser
     }

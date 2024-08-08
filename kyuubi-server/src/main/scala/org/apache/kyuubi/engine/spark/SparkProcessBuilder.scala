@@ -140,6 +140,7 @@ class SparkProcessBuilder(
     if (AuthTypes.withName(conf.get(HA_ZK_ENGINE_AUTH_TYPE)) == AuthTypes.KERBEROS) {
       allConf = allConf ++ zkAuthKeytabFileConf(allConf)
     }
+    allConf = allConf ++ Map("kyuubi.session.user" -> proxyUser)
     // pass spark engine log path to spark conf
     (allConf ++ engineLogPathConf ++ extraYarnConf(allConf) ++ appendPodNameConf(allConf)).foreach {
       case (k, v) => buffer ++= confKeyValue(convertConfigKey(k), v)
@@ -177,19 +178,7 @@ class SparkProcessBuilder(
       try {
         val ugi = UserGroupInformation
           .loginUserFromKeytabAndReturnUGI(principal.get, keytab.get)
-        if (doAsEnabled && ugi.getShortUserName != proxyUser) {
-          warn(s"The session proxy user: $proxyUser is not same with " +
-            s"spark principal: ${ugi.getShortUserName}, skip using keytab. " +
-            "Fallback to use proxy user.")
-          None
-        } else if (!doAsEnabled && ugi.getShortUserName != Utils.currentUser) {
-          warn(s"The server's user: ${Utils.currentUser} is not same with " +
-            s"spark principal: ${ugi.getShortUserName}, skip using keytab. " +
-            "Fallback to use server's user.")
-          None
-        } else {
-          Some(ugi.getShortUserName)
-        }
+        Option(ugi.getShortUserName)
       } catch {
         case e: IOException =>
           error(s"Failed to login for ${principal.get}", e)
